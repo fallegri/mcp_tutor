@@ -97,10 +97,10 @@ const CONSULTATION_STEPS: ConsultationStep[] = [
   {
     id: "material_upload",
     question:
-      "Pega o describe el material adicional que quieres incluir como base:",
-    type: "text",
+      "Sube archivos o pega el material adicional que quieres incluir como base:",
+    type: "upload",
     helpText:
-      "Puede ser documentación de API, ejemplos de código, especificaciones, etc.",
+      "Puedes subir archivos .md, .txt, .json, .ts, .yaml, .py o pegar texto directamente. Acepta documentación de API, skills de otros sistemas, especificaciones, etc.",
   },
   {
     id: "security",
