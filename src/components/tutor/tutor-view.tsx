@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import type { McpProjectConfig, TutorDocumentation } from "@/types";
 import { TutorDocGenerator } from "@/lib/tutor/docs";
+import { downloadTutorDocs } from "@/lib/utils/download";
 
 interface TutorViewProps {
   onBack: () => void;
@@ -337,13 +338,7 @@ function ExportSection({
   };
 
   const handleDownload = () => {
-    const blob = new Blob([markdownContent], { type: "text/markdown" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "MCP-Tutorial.md";
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadTutorDocs(markdownContent, "MCP-Tutorial.md");
   };
 
   return (
