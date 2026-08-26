@@ -41,10 +41,6 @@ interface EvalResult {
 const server = new McpServer({
   name: "ux-evaluator",
   version: "1.0.0",
-  capabilities: {
-    tools: {},
-    resources: {},
-  },
 });
 
 // ============================================================

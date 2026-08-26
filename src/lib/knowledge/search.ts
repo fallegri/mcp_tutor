@@ -140,6 +140,81 @@ asset downloading, layout analysis.`,
 Key patterns: PromQL/LogQL query building, time range handling, alert correlation,
 dashboard generation, anomaly detection hints.`,
   },
+  {
+    id: "kb-011",
+    title: "UX Evaluator MCP (ISO 9241/25010)",
+    description:
+      "MCP server para evaluar código HTML/CSS contra normas ISO de UX: 9241-210, 9241-11, 25010, 25022, 25023",
+    category: "evaluation",
+    tags: ["ux", "usability", "iso-9241", "iso-25010", "accessibility", "html", "css", "wcag", "evaluation"],
+    platform: "universal",
+    difficulty: "intermediate",
+    content: `UX Evaluator MCP analiza código HTML/CSS contra criterios ISO de usabilidad.
+CLAVE: Recibe CÓDIGO como input (el AI lee el archivo y se lo pasa).
+No necesita acceso a filesystem ni URLs - es análisis estático.
+Criterios: estructura semántica, contraste, alt text, responsive, focus styles,
+form labels, skip navigation, lazy loading, reduced motion.
+Expone criterios como Resource para que el AI tenga contexto de QUÉ evaluar.`,
+  },
+  {
+    id: "kb-012",
+    title: "Code Quality Analyzer MCP",
+    description:
+      "MCP server para análisis de calidad de código: complejidad ciclomática, SOLID, code smells",
+    category: "evaluation",
+    tags: ["quality", "code-analysis", "solid", "complexity", "lint", "metrics", "refactor"],
+    platform: "universal",
+    difficulty: "intermediate",
+    content: `Code Quality MCP analiza código fuente para detectar problemas de calidad.
+Estrategia: code_input (el AI pasa el código como string).
+Métricas: complejidad ciclomática, longitud de funciones, nesting depth,
+duplicación, adherencia a SOLID, type safety.
+Produce score numérico + recomendaciones concretas de mejora.`,
+  },
+  {
+    id: "kb-013",
+    title: "Security Auditor MCP (OWASP)",
+    description:
+      "MCP server que audita código contra OWASP Top 10 usando análisis estático",
+    category: "evaluation",
+    tags: ["security", "owasp", "audit", "vulnerability", "sast", "injection", "xss"],
+    platform: "universal",
+    difficulty: "advanced",
+    content: `Security Auditor MCP detecta vulnerabilidades OWASP en código.
+Estrategia: code_input (análisis estático del código fuente).
+Detecta: SQL injection, XSS, CSRF, secrets hardcodeados, path traversal,
+insecure deserialization, broken auth patterns.
+Usa regex + patrones AST. Produce reporte con severidad + fix sugerido.`,
+  },
+  {
+    id: "kb-014",
+    title: "API Validator MCP (OpenAPI)",
+    description:
+      "MCP server que valida implementaciones contra especificaciones OpenAPI/Swagger",
+    category: "evaluation",
+    tags: ["api", "openapi", "swagger", "validation", "rest", "schema", "contract"],
+    platform: "universal",
+    difficulty: "intermediate",
+    content: `API Validator MCP compara implementación de endpoints contra un spec OpenAPI.
+Estrategia: code_input (recibe código del endpoint + spec como Resource).
+Valida: paths correctos, schemas de request/response, status codes,
+headers requeridos, autenticación. Útil para contract testing.`,
+  },
+  {
+    id: "kb-015",
+    title: "Accessibility Checker MCP (WCAG)",
+    description:
+      "MCP server que evalúa accesibilidad web según WCAG 2.1 AA/AAA",
+    category: "evaluation",
+    tags: ["accessibility", "a11y", "wcag", "aria", "screen-reader", "contrast", "keyboard"],
+    platform: "universal",
+    difficulty: "intermediate",
+    content: `Accessibility MCP evalúa HTML contra WCAG 2.1 nivel AA y AAA.
+Estrategia: code_input (recibe HTML renderizado).
+Checks: contraste de colores, alt text, roles ARIA, focus management,
+heading hierarchy, form labels, skip links, landmark regions.
+Para evaluación visual real (layout, overflow) necesita estrategia browser.`,
+  },
 ];
 
 /**

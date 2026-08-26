@@ -8,6 +8,12 @@ import type {
   Transport,
 } from "@/types";
 import { searchKnowledge, getSuggestedSkills } from "@/lib/knowledge/search";
+import {
+  analyzeContext,
+  getStrategyDescription,
+  type AccessStrategy,
+  type ContextAnalysis,
+} from "@/lib/mcp/context-analyzer";
 
 /**
  * Consultation Flow Engine
@@ -21,10 +27,12 @@ import { searchKnowledge, getSuggestedSkills } from "@/lib/knowledge/search";
  * 3. Search knowledge base for similar MCPs
  * 4. Which platforms to target?
  * 5. What skills/tools to include?
- * 6. Any additional material to include?
- * 7. Security level selection
- * 8. Transport selection
- * 9. Confirmation
+ * 6. ⭐ NEW: Access strategy (how will MCP get its data?)
+ * 7. Any additional material to include?
+ * 8. Material upload
+ * 9. Security level selection
+ * 10. Transport selection
+ * 11. Confirmation (with context warnings)
  */
 
 const CONSULTATION_STEPS: ConsultationStep[] = [
@@ -44,7 +52,7 @@ const CONSULTATION_STEPS: ConsultationStep[] = [
     question: "¿Cuál es el objetivo principal de tu MCP?",
     type: "text",
     helpText:
-      "Describe qué quieres que haga tu servidor MCP. Ejemplo: 'Conectar con mi base de datos PostgreSQL para consultas de solo lectura'",
+      "Describe qué quieres que haga tu servidor MCP. Ejemplo: 'Evaluar código HTML contra normas ISO de UX', 'Conectar con mi base de datos PostgreSQL para consultas'",
     validation: "min:10",
   },
   {
@@ -52,7 +60,7 @@ const CONSULTATION_STEPS: ConsultationStep[] = [
     question: "¿Cómo quieres llamar a tu servidor MCP?",
     type: "text",
     helpText:
-      "Un nombre descriptivo corto. Ejemplo: 'Database Explorer', 'Code Analyzer'",
+      "Un nombre descriptivo corto. Ejemplo: 'UX Evaluator', 'Database Explorer', 'Code Analyzer'",
     validation: "min:2,max:50",
   },
   {
@@ -84,7 +92,23 @@ const CONSULTATION_STEPS: ConsultationStep[] = [
     type: "multiselect",
     options: [], // Dynamic, populated based on search
     helpText:
-      "Selecciona las herramientas que quieres que tu MCP exponga. Puedes agregar personalizadas después.",
+      "Selecciona las herramientas que quieres que tu MCP exponga. Puedes agregar personalizadas o subir archivos.",
+  },
+  // ⭐ NEW STEP: Access Strategy
+  {
+    id: "access_strategy",
+    question: "¿Cómo obtendrá tu MCP los datos que necesita analizar o procesar?",
+    type: "select",
+    options: [
+      "📝 El AI le pasa el código/texto directamente (recomendado para evaluación/análisis)",
+      "📁 Lee archivos del disco local (filesystem)",
+      "🌐 Obtiene contenido de URLs (fetch HTTP)",
+      "🗄️ Consulta una base de datos (PostgreSQL, etc.)",
+      "🔗 Llama APIs externas (REST/GraphQL)",
+      "🖥️ Usa un navegador headless (Puppeteer - para SPAs y screenshots)",
+    ],
+    helpText:
+      "IMPORTANTE: Si tu MCP evalúa o analiza código (UX, seguridad, calidad), la opción recomendada es que el AI le pase el código directamente. Un MCP NO puede 'ver' una página web por sí solo sin un navegador.",
   },
   {
     id: "additional_material",
@@ -92,7 +116,7 @@ const CONSULTATION_STEPS: ConsultationStep[] = [
       "¿Deseas agregar material teórico o skills de otros sistemas como base?",
     type: "confirm",
     helpText:
-      "Puedes proporcionar documentación, especificaciones, o código de referencia.",
+      "Puedes proporcionar documentación, especificaciones, criterios de evaluación, o código de referencia. Esto se incluirá como Resources del MCP.",
   },
   {
     id: "material_upload",
@@ -100,7 +124,7 @@ const CONSULTATION_STEPS: ConsultationStep[] = [
       "Sube archivos o pega el material adicional que quieres incluir como base:",
     type: "upload",
     helpText:
-      "Puedes subir archivos .md, .txt, .json, .ts, .yaml, .py o pegar texto directamente. Acepta documentación de API, skills de otros sistemas, especificaciones, etc.",
+      "Puedes subir archivos .md, .txt, .json, .ts, .yaml, .py o pegar texto directamente. Este material se convertirá en Resources que el AI podrá consultar.",
   },
   {
     id: "security",
@@ -192,6 +216,17 @@ export function processAnswer(
       }
       break;
 
+    case "skills":
+      // After skills are selected, run context analysis to detect strategy
+      const partialConfig = buildPartialConfig(newState);
+      const analysis = analyzeContext(partialConfig);
+      // Store analysis for use in access_strategy step
+      newState.answers = {
+        ...newState.answers,
+        _contextAnalysis: analysis,
+      };
+      break;
+
     case "additional_material":
       // If user says no to additional material, skip the upload step
       if (answer === false || answer === "no") {
@@ -259,6 +294,22 @@ export function buildConfigFromAnswers(
     })
   );
 
+  // Parse access strategy
+  const strategyMap: Record<string, AccessStrategy> = {
+    "📝 El AI le pasa el código/texto directamente (recomendado para evaluación/análisis)": "code_input",
+    "📁 Lee archivos del disco local (filesystem)": "filesystem",
+    "🌐 Obtiene contenido de URLs (fetch HTTP)": "url_fetch",
+    "🗄️ Consulta una base de datos (PostgreSQL, etc.)": "database",
+    "🔗 Llama APIs externas (REST/GraphQL)": "api_call",
+    "🖥️ Usa un navegador headless (Puppeteer - para SPAs y screenshots)": "browser",
+  };
+
+  const accessStrategy: AccessStrategy =
+    strategyMap[answers.access_strategy as string] || "code_input";
+
+  // Get context analysis (computed during flow)
+  const contextAnalysis = answers._contextAnalysis as ContextAnalysis | undefined;
+
   return {
     name: (answers.name as string) || "My MCP Server",
     description: (answers.objective as string) || "",
@@ -268,15 +319,45 @@ export function buildConfigFromAnswers(
     transport,
     securityLevel,
     skills,
+    accessStrategy,
+    contextAnalysis,
     additionalMaterial: answers.material_upload
-      ? [
-          {
-            name: "User Material",
-            type: "documentation",
-            content: answers.material_upload as string,
-          },
-        ]
+      ? Array.isArray(answers.material_upload)
+        ? (answers.material_upload as Array<{ name: string; type: string; content: string }>).map((f) => ({
+            name: f.name,
+            type: f.type as "documentation" | "code" | "specification" | "example",
+            content: f.content,
+          }))
+        : [
+            {
+              name: "User Material",
+              type: "documentation" as const,
+              content: answers.material_upload as string,
+            },
+          ]
       : undefined,
+  };
+}
+
+/**
+ * Build partial config for context analysis (before all answers are in)
+ */
+function buildPartialConfig(state: ConsultationState): McpProjectConfig {
+  const { answers } = state;
+  const skills = ((answers.skills as string[]) || []).map((name, i) => ({
+    id: `skill-${i}`,
+    name,
+  }));
+
+  return {
+    name: (answers.name as string) || "",
+    description: (answers.objective as string) || "",
+    objective: (answers.objective as string) || "",
+    mode: state.mode,
+    targetPlatforms: ["universal"],
+    transport: "stdio",
+    securityLevel: "standard",
+    skills,
   };
 }
 
@@ -293,8 +374,18 @@ export function getStateSummary(state: ConsultationState): string {
   if (answers.objective) parts.push(`**Objetivo**: ${answers.objective}`);
   if (answers.platforms)
     parts.push(`**Plataformas**: ${(answers.platforms as string[]).join(", ")}`);
+  if (answers.access_strategy) parts.push(`**Acceso a datos**: ${answers.access_strategy}`);
   if (answers.security) parts.push(`**Seguridad**: ${answers.security}`);
   if (answers.transport) parts.push(`**Transporte**: ${answers.transport}`);
+
+  // Show context warnings if any
+  const analysis = answers._contextAnalysis as ContextAnalysis | undefined;
+  if (analysis && analysis.warnings.length > 0) {
+    parts.push("\n**⚠️ Alertas de contexto:**");
+    for (const w of analysis.warnings) {
+      parts.push(`- [${w.severity}] ${w.title}: ${w.recommendation}`);
+    }
+  }
 
   return parts.join("\n");
 }

@@ -133,6 +133,37 @@ export class SecurityScanner {
       recommendation:
         "Completar la implementación antes de publicar",
     },
+    // Empty tool detection
+    {
+      id: "SEC-013",
+      pattern: /\/\/\s*TODO:\s*Implement your (business |tool )?logic here/g,
+      severity: "high",
+      title: "Herramienta sin implementación real",
+      description:
+        "Se detectó un tool con lógica placeholder. El MCP no hará nada útil sin implementación real.",
+      recommendation:
+        "Reemplazar el TODO con lógica real de análisis/procesamiento. Usar una estrategia de acceso definida (code_input, filesystem, etc.)",
+    },
+    {
+      id: "SEC-014",
+      pattern: /return\s*\{\s*success:\s*true,\s*data:\s*\{\s*input,?\s*processedAt/g,
+      severity: "high",
+      title: "Tool devuelve solo echo del input",
+      description:
+        "La herramienta solo devuelve el input sin procesarlo. Esto indica implementación placeholder.",
+      recommendation:
+        "Implementar lógica real que analice, transforme, o enriquezca el input antes de devolverlo.",
+    },
+    {
+      id: "SEC-015",
+      pattern: /server\.tool\([^)]+,\s*async\s*\([^)]*\)\s*=>\s*\{\s*return\s*\{/g,
+      severity: "medium",
+      title: "Tool con lógica trivial (una sola línea)",
+      description:
+        "La herramienta tiene una implementación extremadamente simple que puede no ser útil.",
+      recommendation:
+        "Verificar que el tool tenga validación de input, lógica de procesamiento, y manejo de errores.",
+    },
   ];
 
   /**

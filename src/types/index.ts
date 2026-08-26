@@ -19,6 +19,15 @@ export type McpStatus = "draft" | "generating" | "completed" | "error";
 
 // ============ MCP GENERATION ============
 
+export type AccessStrategy =
+  | "code_input"
+  | "filesystem"
+  | "url_fetch"
+  | "database"
+  | "api_call"
+  | "browser"
+  | "hybrid";
+
 export interface McpProjectConfig {
   name: string;
   description: string;
@@ -28,7 +37,29 @@ export interface McpProjectConfig {
   transport: Transport;
   securityLevel: SecurityLevel;
   skills: SkillConfig[];
+  accessStrategy?: AccessStrategy;
+  contextAnalysis?: ContextAnalysisResult;
   additionalMaterial?: MaterialInput[];
+}
+
+export interface ContextAnalysisResult {
+  primaryStrategy: AccessStrategy;
+  secondaryStrategies: AccessStrategy[];
+  needsResources: boolean;
+  suggestedResources: Array<{
+    name: string;
+    description: string;
+    type: string;
+    contentTemplate: string;
+  }>;
+  warnings: Array<{
+    severity: string;
+    title: string;
+    description: string;
+    recommendation: string;
+  }>;
+  requiredDependencies: string[];
+  complexity: number;
 }
 
 export interface SkillConfig {
